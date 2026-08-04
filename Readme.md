@@ -308,3 +308,13 @@ si vous avez 200 test dans un fichier vous pouvez executer un seul pendant le de
 ```bash
 zig test main.zig --test-filter "addition"
 ```
+
+## VARIABLE
+est une unité de stockage memoire
+ils sont declarés par **const** et **var**
+
+le variable au niveau du contenur ont une durée de vie statique sont independante de l"order et analysées paresseusement , il peuvent etre declarée à l'nterieur d"un struc , union, enum, opaque
+
+il est egalement possible d'avoir des variables locales à durée de vie statique en utilisant des conteneurs à l'interieur d"une fonction
+
+les variables locales apparaissent à l'interieur des fonction des bloc comptime, des blocs @cImport
