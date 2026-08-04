@@ -156,3 +156,6 @@ bool|bool|true ou false|
 |\xNN	|hexadecimal 8-bit byte value (2 digits)
 |\u{NNNNNN}	hexadecimal Unicode scalar value UTF-8 encoded (1 or more digits)|
 NB : la valeur scalaire unicode valide maximale est  0x10ffff
+
+## destructuring
+il sert à separer des elements de types d'agregats indexables(tuples , arrays, vector)
