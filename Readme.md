@@ -313,8 +313,73 @@ zig test main.zig --test-filter "addition"
 est une unité de stockage memoire
 ils sont declarés par **const** et **var**
 
-le variable au niveau du contenur ont une durée de vie statique sont independante de l"order et analysées paresseusement , il peuvent etre declarée à l'nterieur d"un struc , union, enum, opaque
+**le variable au niveau du contene(GLOBAL& CONTAINER VARIABLES)**
+
+ ont une durée de vie statique sont independante de l"order et analysées paresseusement , il peuvent etre declarée à l'nterieur d"un struc , union, enum, opaque ou en dehors de toute fonction
+ ils sont stocké eb memoire globale (.data ou .bss du binaire) et accessible à tous le thread 
 
 il est egalement possible d'avoir des variables locales à durée de vie statique en utilisant des conteneurs à l'interieur d"une fonction
 
-les variables locales apparaissent à l'interieur des fonction des bloc comptime, des blocs @cImport
+**VARIABLE LOCALE(LOCAL VARIABLE)** est une variable declarée à l'interieur d'un bloc de code (une fonction, une boucle while , un bloc if)
+c'est sont de variables à une durée de vie qui dure seulement pendant le temps d'execution du bloc dans lequelle elle se trouve à la fin de la fonction ou du bloc sa memire est libéreéé automatiquement
+
+Si vous voulez l'équivalent d'une variable statique locale à une fonction, vous pouvez utiliser une struct anonyme à l'intérieur de la fonction :
+```zig
+fn comptage() u32 {
+    const S = struct {
+        var val: u32 = 0; // Se comporte exactement comme une variable 'static'
+    };
+    S.val += 1;
+    return S.val;
+}
+```
+
+**VARIABLE DE THREAD(threadlocal)**
+
+le mot-clé threadlocal permet d'indiquer qu'une variable globale doit avoir une copie distincte pour chaque thread il est stocké dans la memoire reservee au thread (TLS (thread local storage)) ça durée depends su thread il permet d'eviter d'avoir à utliser des verroux(mutex) car chaque thread modifie sa propre version isolée de la variable
+
+```zig
+// Chaque thread aura son propre 'id_appel' indépendant
+threadlocal var id_appel: u32 = 0;
+
+pub fn traiterRequete() void {
+    id_appel += 1; // Ne modifiera pas la valeur des autres threads
+}
+```
+
+nb:Par défaut, les variables globales sont partagées entre tous les threads.
+
+**COMPTIME** est une fonctionalité de zig qui indique qu"une valeur, variable ou un calcul doit etre executé pendant la compilation et non pendant l"execution du programme
+
+```zig
+pub fn main() void {
+    // Ce calcul (2 + 3) se fait lors de la compilation
+    comptime var x: i32 = 2;
+    comptime {
+        x += 3;
+    }
+
+    // Dans le binaire final, c'est comme si vous aviez écrit : const y = 5;
+    const y = x;
+}
+```
+
+En Zig, les types sont des valeurs manipulatibles uniquement au moment de la compilation
+
+```zig
+// 'T' est un type passé à la compilation
+fn creerTableau(comptime T: type, comptime taille: usize) [taille]T {
+    return [_]T{0} ** taille;
+}
+
+// Utilisation :
+var mon_tableau = creerTableau(u32, 10); // Génère un [10]u32
+```
+Tableaurécapitulatif
+
+|Concept|Déclaration|Quand est-elle créée ?|Où vit-elle ?|partagée entre threads ?|
+|---|---|---|---|---|
+|Locale|var / const dans une fn|À l'exécution|Pile (Stack)|Non (propre au thread)
+|Statique Globalevar |/ const hors fn|Au lancement du programme|Mémoire globale (.data)|Oui (accès partagé)|
+|Thread Local|threadlocal var|À la création du thread|TLS (Thread Local Storage)|Non (isolée par thread)|
+|Comptime|comptime var / const|À la compilation|Dans le binaire (en dur)|N/A (n'existe plus à l'exécution)|
