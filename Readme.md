@@ -150,12 +150,161 @@ bool|bool|true ou false|
 |\n	|Newline|
 |\r	|Carriage Return|
 \t	|Tab|
-|\\	|Backslash|
+|\\ |Backslash|
 |\'	|Single Quote|
 |\"	Double Quote|
-|\xNN	|hexadecimal 8-bit byte value (2 digits)
-|\u{NNNNNN}	hexadecimal Unicode scalar value UTF-8 encoded (1 or more digits)|
+|\xNN	|hexadecimal 8-bit byte value (2 digits)|
+|\u{NNNNNN}|	hexadecimal Unicode scalar value UTF-8 encoded (1 or more digits)|
 NB : la valeur scalaire unicode valide maximale est  0x10ffff
 
 ## destructuring
 il sert à separer des elements de types d'agregats indexables(tuples , arrays, vector)
+
+## STRING LLITERAL
+est un texte ecrit directement entre guillements dans le code zig
+en zig lorsque on ecrit "zig" son type exacte est **(*const[3:0]u8)**
+*const : est un pointeur constant
+[3:0] : un tableau de 3octets terminé par le caractere nul 0 pour des raison d'interoperabilité avec le C
+u8: c'est le type que reçoit le string , (unsigned-8bit integer) le UTF-8
+
+NB : zig convertit automatiquement le string lutteral en slice d'octet constant ([]const u8)
+```zig
+const std = @import("std");
+
+pub fn main() void {
+    // Coercion automatique vers une slice []const u8
+    const message: []const u8 = "Bonjour le monde !";
+
+    // On peut obtenir la longueur directement avec .len
+    std.debug.print("Texte: {s} | Longueur: {d} octets\n", .{ message, message.len });
+}
+```
+
+**les chaines multilignes**zig n'utilise pas """ ou `` pour les chaines sur plusieurs lignes, il utilise la syntaxe \\ au debut de chaque ligne
+
+```zig
+const json_exemple =
+    \\{
+    \\  "nom": "Zig",
+    \\  "type": "Langage de programmation",
+    \\  "citation": "Pas de comportement indéfini caché."
+    \\}
+;
+```
+
+## formatage {}
+
+les symboles **{}** en zig sert à specifier le format d'affichage d'un variable
+
+par defaut {} signifie afficher cette valeur avec son format par defaut exemple 
+```zig
+const std = @import("std");
+
+pub fn main() void {
+    const age: u32 = 25;
+    const pi: f32 = 3.14;
+    const nom: []const u8 = "Alice";
+
+    // Les acolytes vides fonctionnent pour presque tout
+    std.debug.print("nom: {}, age: {}, pi: {}\n", .{ nom, age, pi });
+}
+```
+pour changer la façon dont les variables doivent s'afficher voici un tableau explicatif de comment spectifier le format d'affichage d'une variable
+
+|Spécificateur|Description|Exemple|Résultat|
+|---|---|---|---|
+|{s}|String (chaîne/slice d'octets)|print("{s}", .{"Hello"})|Hello|
+|{d}|Décimal (entiers ou flottants)|print("{d}", .{42})|42|
+|{x}|Hexadécimal (minuscules)|print("{x}", .{255})|ff|
+|{X}|Hexadécimal (majuscules)|print("{X}", .{255})|FF|
+|{b}|Binaire|print("{b}", .{5})|101|
+|{c}|Caractère (affiche un octet en ASCII)|print("{c}", .{65})|A|
+|{*}|Pointeur (affiche l'adresse mémoire)|print("{*}", .{ptr})|u8@7ffc...|
+|{?}|Optional (si vous avez un ?T)|print("{?}", .{opt}|)42 ou null|
+|{!}|Error Union (si vous avez un E!T)|print("{!}", .{res})|42 ou error.BadValue|
+
+on peut aussi controler la largeur d'affichage et la precison des decimals avec
+```zig
+const pi: f64 = 3.14159265;
+
+// Afficher seulement 2 décimales
+std.debug.print("{d:.2}\n", .{pi}); // Resultat : 3.14
+```
+faire du **padding**
+```zig
+const x: u32 = 7;
+
+// Remplir avec des zéros sur 4 chiffres de large
+std.debug.print("{d:0>4}\n", .{x}); // Résultat : 0007
+
+// Aligner à droite sur 5 caractères de large
+std.debug.print("{d:>5}\n", .{x});  // Résultat : "    7"
+```
+
+NB : si vous avez un pointeur vers un tableau d'octes (*const [5]u8) ce qui est le cas pour le string litteral, {} affichera l'adresse memoire du tabelau , alors que {s} interpretera ce pointeur comme du texte à afficher 
+```zig
+const texte = "Zig"; // Type: *const [3:0]u8
+
+std.debug.print("{}\n", .{texte});  // Affiche l'adresse (ex: u8@7ffc...)
+std.debug.print("{s}\n", .{texte}); // Affiche le texte: "Zig"
+```
+
+## ZIG TEST
+contraiment à beaucoup de langages qui necessitent des frameworks externes les test sont intégrés nativement au langage et au compilateur zig
+
+en zig un test est simplement un blox de code précédé du mot-clé test
+```zig
+const std = @import("std");
+const testing = std.testing;
+
+fn additionner(a: i32, b: i32) i32 {
+    return a + b;
+}
+// Déclaration d'un bloc de test
+test "addition basique" {
+    const resultat = additionner(2, 3);
+    
+    // On vérifie le résultat avec std.testing
+    try testing.expectEqual(@as(i32, 5), resultat);
+}
+```
+
+pour lancer le test il suffit de lancer dans le terminale
+```bash
+zig test votre_fichier.zig
+```
+pour valider vos test la bibliotheque standart fournit le module **std.testing**
+
+voici certaines fonction :
+
+|Fonction|Description|Exemple|
+|---|---|---|
+|expect(condition)|Vérifie qu'une condition est vraie (true).|try testing.expect(x > 0);|
+|expectEqual(expected, actual)|Vérifie l'égalité entre deux valeurs de même type|.try testing.expectEqual(10, x);|
+|expectEqualSlices(T, expected, actual)|Compare deux slices (ex: deux chaînes de caractères).|try testing.expectEqualSlices(u8, "abc", res);|
+|expectError(expected_err, action)|Vérifie qu'une fonction renvoie bien une erreur précise.|try testing.expectError(error.DivisionByZero, div(1,0));|
+
+nb : toutes ces fonctions peuvent echouer en renvoyant une erreur **error.TestUnexpectedResult** c'est pour cela qu'on met try devant chaque assertion
+
+**detection automatique des fuites de memoire(memoiry leaks)** c'est une fonctionnalités les plus puissantes de zig
+```zig
+const std = @import("std");
+
+test "detection de fuite" {
+    // std.testing.allocator est un allocateur spécial pour les tests
+    const allocator = std.testing.allocator;
+
+    // On alloue de la mémoire
+    const memory = try allocator.alloc(u32, 100);
+    
+    // OUPS ! On a oublié de faire : defer allocator.free(memory);
+}
+```
+
+NB : si vous compilez votre projet en binaire final le compilateur ignore totalement les blocs test
+-vous pouvez créez un dossier test/ qui importe vos modules pour les tester de l'exterieur
+si vous avez 200 test dans un fichier vous pouvez executer un seul pendant le debogage en utiliser l'option **--test-filter**
+
+```bash
+zig test main.zig --test-filter "addition"
+```
