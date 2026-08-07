@@ -407,3 +407,34 @@ c_longdouble - correspondances pour la cible C ABIlong double
 ![Capture d'écran](img/operateur%20(6).png)
 ![Capture d'écran](img/operateur%20(7).png)
 ![Capture d'écran](img/operateur%20(8).png)
+
+bon içi je me concentre plus sur les operateur nouveau pour moi :
+
+### ~ (NOT binaire / Inversion Bitwise)
+c'est l'operateur d'inversion bit à bit il inverse chaque bit de son operateur
+
+### orelse (Valeur par défaut pour Optionnel)
+zig utilise le type optionnel ?T pour les valeurs qui peuvent etre null l'operateur orelse permet de deballer un optionnel s'il vaut null il bascule sur une valeur par defaut ou execute un blOC/retour de fonction(retrn, unreachable)
+
+### .? (Déballage d'Optionnel)
+l'operateur postfixe .? est un raccourci pour deballer une valeur optionnelle en affirmant qu'elle n'est pas null
+
+NB : Attention : Si la valeur est réellement null, le programme déclenche un panic (en mode Debug/ReleaseSafe) ou un comportement indéfini (Safety-checked undefined behavior en ReleaseFast).
+
+### catch (Gestion des Erreurs)
+en zig les erreurs sont vehiculée par le type error union (Eroor!T) l'operateur catch permet de intercepter l'erreur et de fournir une valeur de repli ou de la gerer
+
+### ++ (Concaténation à la compilation)
+L'opérateur ++ sert à concaténer deux tableaux ou slices de même type.
+
+NB : Cet opérateur fonctionne uniquement sur des valeurs dont la taille est connue à la compilation (comptime).
+
+### .* (Déréférencement de pointeur)
+Zig utilise l'opérateur postfixe .* pour accéder à la valeur pointée par un pointeur (équivalent du *p en C).
+
+### || (Union de jeux d'erreurs)
+L'opérateur || a deux usages selon le contexte :
+
+En logique booléenne : L'opérateur classique "OU" logique (if (a || b)).
+
+Pour les types d'erreurs : Il combine deux ensembles d'erreurs (Error Sets) pour en créer un nouveau.
