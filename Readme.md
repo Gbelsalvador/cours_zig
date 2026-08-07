@@ -399,3 +399,11 @@ c_longdouble - correspondances pour la cible C ABIlong double
 
 ## TABLEAU DES OPERATUERS
 
+![Capture d'écran](img/operateur (1).png)
+![Capture d'écran](img/operateur (2).png)
+![Capture d'écran](img/operateur (3).png)
+![Capture d'écran](img/operateur (4).png)
+![Capture d'écran](img/operateur (5).png)
+![Capture d'écran](img/operateur (6).png)
+![Capture d'écran](img/operateur (7).png)
+![Capture d'écran](img/operateur (8).png)
