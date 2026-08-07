@@ -41,8 +41,8 @@ zig test -femit-docs main.zig
 ```
 
 NB : les commentaires doc ne sont aurtoisés qu'à certains endroit comme :
-- au milleiu d'une expression
-- avant un commenataire non medical
+- au millieu d'une expression
+- avant un commentaire non medical
 ```zig
 /// doc-comment
 //! top-level doc-comment
@@ -77,9 +77,11 @@ Il ne peut pas commencer par un chiffre.
 
 Zig est sensible à la casse (myVar et myvar sont distincts).
 
-Vous ne pouvez pas utiliser un mot-clé réservé (fn, const, var, pub, struct, etc.) comme nom classique.
+Vous ne pouvez pas utiliser un mot-clé réservé (fn, const, var, pub, struct, etc.) comme nom classique
+```zig
 const max_speed = 100; // 'max_speed' est l'identifiant
 var user_count: u32 = 0; // 'user_count' est l'identifiant
+```
 NB : Si vous devez absolument utiliser un nom qui entre en conflit avec un mot-clé (par exemple lors de l'interaction avec du code C), Zig permet d'échapper l'identifiant avec @"..."
 ```zig
 const @"fn" = 42; // Permet d'utiliser 'fn' comme nom de variable
@@ -383,3 +385,17 @@ Tableaurécapitulatif
 |Statique Globalevar |/ const hors fn|Au lancement du programme|Mémoire globale (.data)|Oui (accès partagé)|
 |Thread Local|threadlocal var|À la création du thread|TLS (Thread Local Storage)|Non (isolée par thread)|
 |Comptime|comptime var / const|À la compilation|Dans le binaire (en dur)|N/A (n'existe plus à l'exécution)|
+
+## FLOAT
+
+zig possete les types de virgule flottante suivants
+
+f16 - IEEE-754-2008 binaire16
+f32 - IEEE-754-2008 binaire32
+f64 - IEEE-754-2008 binaire64
+f80 - IEEE-754-2008 Précision étendue 80 bits
+f128 - IEEE-754-2008 binaire128
+c_longdouble - correspondances pour la cible C ABIlong double
+
+## TABLEAU DES OPERATUERS
+
