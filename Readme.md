@@ -763,3 +763,48 @@ pub fn waitForReady() void {
 
 **L'Alignement (align(N))**
 L'alignement stipule que l'adresse mémoire d'une donnée doit être un multiple exact d'un nombre $N$ (où $N$ est une puissance de 2).Par défaut, Zig attribue à chaque type un alignement naturel selon l'architecture (par exemple, 4 octets pour un u32, 8 octets pour un u64). Vous pouvez forcer un alignement sur les variables, les structures et les pointeurs.
+
+```zig
+// Un tampon de 64 octets aligné sur 16 octets (indispensable pour les instructions SIMD AVX)
+var buffer: [64]u8 align(16) = undefined;
+
+// Un pointeur garantissant un alignement de 16 octets
+const ptr: *align(16) [64]u8 = &buffer;
+```
+Dégradations et Casts d'Alignement :Dégradation automatique : Un pointeur plus aligné peut être converti implicitement en un pointeur moins aligné (*align(16) i32 $\rightarrow$ *align(4) i32).Promotions explicites : Passer d'un alignement faible à un alignement plus strict requiert @alignCast() pour avertir le compilateur que vous garantissez l'adresse mémoire à l'exécution.
+
+```zig
+var raw_bytes align(4) = [_]u8{ 1, 2, 3, 4 };
+
+// Cast explicite en spécifiant l'alignement requis
+const ptr_u32: *align(4) u32 = @ptrCast(@alignCast(&raw_bytes));
+```
+
+**allowzero (Autoriser l'adresse 0x0)**
+Par défaut, Zig considère que l'adresse mémoire zéro (0x0) est invalide pour un pointeur non-optionnel (*T). Déférencer un pointeur *T pointant sur 0x0 déclenche un Safety Panic (ou un comportement indéfini en mode ReleaseFast).
+
+Cependant, dans le développement de noyaux (kernel), de bootloaders ou sur certains microcontrôleurs (ex: ARM Cortex-M), la table des vecteurs d'interruption est directement mappée à l'adresse mémoire 0x00000000.
+
+Le mot-clé allowzero permet d'expliciter qu'un pointeur à l'adresse zéro est valide et n'est pas une valeur nulle.
+
+```zig
+// Pointeur non-optionnel autorisant spécifiquement l'adresse 0x0
+const vector_table: *allowzero u32 = @ptrFromInt(0x0000_0000);
+
+pub fn readVectorTable() u32 {
+    // Valide et ne déclenche aucun Safety Panic même à l'adresse 0x0
+    return vector_table.*;
+}
+```
+
+Différence cruciale avec ?*T :
+?*T : Pointeur optionnel où null est représenté en interne par l'adresse 0x0. Il sert à vérifier l'absence de valeur.
+
+*allowzero T : Pointeur ordinaire qui ne peut pas être null, mais dont la cible mémoire valide est physiquement localisée à l'adresse 0x0.
+
+Tableau Récapitulatif
+Propriété|Rôle principal|Impact à la compilation / exécution|
+|--|--|--|
+|volatilmpêche l'invalidation / suppression des accès mémoire par le compilateur.	Force la génération matérielle exacte des instructions load / store.
+align(N)	Impose une contrainte de placement mémoire (adresse divisible par N).	Génère un code d'accès plus efficace ou requis par le processeur/SIMD.
+allowzero	Déclare que l'adresse 0x0 est un emplacement mémoire légitime.	Désactive le check de sûreté "adresse zéro" sans introduire le type optionnel null.
