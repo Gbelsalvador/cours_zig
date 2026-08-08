@@ -438,3 +438,103 @@ L'opérateur || a deux usages selon le contexte :
 En logique booléenne : L'opérateur classique "OU" logique (if (a || b)).
 
 Pour les types d'erreurs : Il combine deux ensembles d'erreurs (Error Sets) pour en créer un nouveau.
+
+## ARRAY
+est une sequence d'elements de taille fixe contigue en memoire
+sa dimension et le type de ses elements sont obligatoirement connus des la compilation(comptime)
+
+**declaration et initialisation** 
+le type d'un tableau s'ecrit [N]T ou N est le nombre d'elements (comptime_init) et le T le type d'elements
+
+```zig
+const std = @import("std");
+
+pub fn main() void {
+    // Déclaration explicite
+    const numbers: [5]i32 = [5]i32{ 1, 2, 3, 4, 5 };
+
+    // Inférence de la taille avec '_'
+    const colors = [_]u8{ 255, 128, 0 };
+
+    // Initialisation répétitive (opérateur **)
+    var buffer: [100]u8 = [_]u8{0} ** 100; // 100 octets initialisés à 0
+}
+```
+**operation de compilation (++ et **)**
+
+Zig propose deux opérateurs d'enchaînement exécutables uniquement sur des valeurs connues à la compilation :
+++ (Concaténation) : Assemble deux tableaux de même type d'élément.
+** (Répétition) : Duplique un tableau $N$ fois.
+
+```zig
+const a = [_]i32{ 1, 2 };
+const b = [_]i32{ 3, 4 };
+
+const concatenated = a ++ b; // Resultat : [1, 2, 3, 4] (type [4]i32)
+const repeated = a ** 3;     // Resultat : [1, 2, 1, 2, 1, 2] (type [6]i32)
+```
+
+**acces et parcours**
+Accès : Indexation classique à base 0 via arr[index]. Les débordements d'indice sont vérifiés à la compilation (si l'index est constant) ou déclenchent un panic en mode Debug/ReleaseSafe à l'exécution.
+
+Taille : Propriété .len
+
+```zig
+const items = [_]i32{ 10, 20, 30 };
+
+// Parcours simple
+for (items) |item| {
+    _ = item;
+}
+
+// Parcours avec index
+for (items, 0..) |item, index| {
+    _ = index;
+    _ = item;
+}
+
+// Parcours par pointeur pour modification
+var mutable_items = [_]i32{ 1, 2, 3 };
+for (&mutable_items) |*item| {
+    item.* *= 2;
+}
+```
+
+**Tableaux Multidimensionnels**
+Les tableaux à plusieurs dimensions sont simplement des tableaux de tableaux ([Lignes][Colonnes]T) :
+
+```zig
+const matrix: [2][3]i32 = [2][3]i32{
+    [_]i32{ 1, 2, 3 },
+    [_]i32{ 4, 5, 6 },
+};
+
+const val = matrix[1][0]; // 4
+```
+**Tableaux avec Sentinelle**
+Un tableau peut inclure une valeur de fin explicite appelée sentinelle, notée [N:valeur]T. C'est le mécanisme utilisé pour garantir la compatibilité avec C (chaînes de caractères terminées par \0).
+
+```zig
+// Tableau de 5 octets se terminant obligatoirement par 0
+const hello: [5:0]u8 = [_:0]u8{ 'h', 'e', 'l', 'l', 'o' };
+
+// Le compilateur garantit que hello[5] existe et vaut 0
+```
+En Zig, les fonctions prennent rarement des tableaux fixes [N]T en paramètre pour éviter d'être restreintes à une seule taille. On utilise des slices ([]T ou []const T). Un pointeur vers un tableau *[N]T se convertit automatiquement en slice.
+```zig
+fn printSum(numbers: []const i32) i32 {
+    var sum: i32 = 0;
+    for (numbers) |n| sum += n;
+    return sum;
+}
+
+pub fn main() void {
+    const arr = [_]i32{ 10, 20, 30, 40, 50 };
+
+    // Coercion d'un pointeur de tableau (*[5]i32) vers une slice ([]const i32)
+    _ = printSum(&arr);
+
+    // Slicing d'une sous-partie
+    _ = printSum(arr[1..4]); // Passe les éléments 20, 30, 40
+}
+```
