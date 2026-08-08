@@ -538,3 +538,100 @@ pub fn main() void {
     _ = printSum(arr[1..4]); // Passe les éléments 20, 30, 40
 }
 ```
+
+## VECTEURS
+est un groupe de booléens , integers, float ou pointeur qui sont utilisés en parallèle en utilisant des instructions SIMD 
+ils occupent un registre vectoriel du processeur (SSE, AVX, NEON)
+nb : Les vecteurs supportent généralement les mêmes opérateurs intégrés que leurs types de base sous-jacents. La seule exception concerne les mots-clés « and » et « or » sur les vecteurs de bools, puisque Ces opérateurs affectent le flux de contrôle, ce qui n’est pas autorisé pour les vecteurs. Toutes les autres opérations sont effectuées élément par élément, et retournent un vecteur de même longueur comme vecteurs d’entrée. Cela inclut :
+-arithmetique (+, -, ., *, @divfloor, @sqrt, @ceil, @log)
+-operateurs bit à bit : >><<&|~
+operateur de comparaison : <>==
+booléen non (!)
+
+il est interdit d'utiliser un operateur math sur un melange de scalaire et vecteurs
+
+NB : les tableaux dynamiques (std.ArrayList) l'equivalent de std::vector en C++ ou Vec<T> en Rust pour gérer des collections de données à taille variable
+
+```zig
+const std = @import("std");
+
+pub fn main() void {
+    const Vec4f = @Vector(4, f32);
+
+    const a: Vec4f = .{ 1.0, 2.0, 3.0, 4.0 };
+    const b: Vec4f = .{ 5.0, 6.0, 7.0, 8.0 };
+
+    // Addition vectorielle SIMD (effectuée en une/deux instructions processeur)
+    const c = a + b; // Resultat: .{ 6.0, 8.0, 10.0, 12.0 }
+
+    // Multiplier par un scalaire avec @splat
+    const scalar: f32 = 2.0;
+    const scaled = a * @as(Vec4f, @splat(scalar)); // .{ 2.0, 4.0, 6.0, 8.0 }
+    
+    _ = c;
+    _ = scaled;
+}
+```
+
+**built-ins utiles pour @vector**
+
+**@splat(valeur)** : duplique une valeur scalaire dans toutes les cases du vecteur
+
+**@reudce(op, vec)** : reduit le vecteur à une valeur scalaire en appliquant l'operation op(.add, .Mul, Min, .Max, .Or, .And etc..)
+
+**@shuffle(T,a, b, mask)**: reorganise combine ou extrait les elements de deux vecteurs a et b semon des indices definis dans mask
+
+```zig
+const v = @Vector(4, f32){ 1.0, 2.0, 3.0, 4.0 };
+
+// Somme de tous les éléments du vecteur
+const sum = @reduce(.Add, v); // 10.0
+
+// Réorganisation des éléments via masque d'indices (-1 = undefined)
+const mask = @Vector(4, i32){ 3, 2, 1, 0 };
+const reversed = @shuffle(f32, v, undefined, mask); // .{ 4.0, 3.0, 2.0, 1.0 }
+```
+
+## 2. Les Tableaux Dynamiques (std.ArrayList)
+Si vous cherchez l'équivalent d'un std::vector de C++ (une liste contiguë en mémoire dont la capacité grandit dynamiquement), Zig utilise la structure de la bibliothèque standard std.ArrayList(T).
+
+Puisqu'il n'y a pas d'allocateur caché en Zig, toute création d'un tableau dynamique requiert d'expliciter un std.mem.Allocator.
+
+```zig
+const std = @import("std");
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    // Instanciation de l'ArrayList pour des entiers i32
+    var list = std.ArrayList(i32).init(allocator);
+    defer list.deinit(); // Libération de la mémoire attribuée
+
+    // Ajout d'éléments
+    try list.append(10);
+    try list.append(20);
+    try list.appendSlice(&[_]i32{ 30, 40, 50 });
+
+    // Accès aux éléments et taille
+    const item = list.items[0]; // 10
+    const count = list.items.len; // 5
+
+    // Obtenir une slice sous-jacente ([]i32)
+    const slice = list.items;
+    
+    _ = item;
+    _ = count;
+    _ = slice;
+}
+```
+
+Comparatif Récapitulatif
+|Caractéristique|@Vector(N, T)|std.ArrayList(T)|
+|---|---|---|
+|Objectif|Calcul parallèle SIMD / Matériel|Stockage dynamique en mémoire|
+|Taille|Fixe à la compilation (N)|Variable à l'exécution|
+|Gestion mémoire|Pile / Registres CPU|Tas (Allocateur explicite)|
+|Types supportés|Primitifs uniquement (f32, i32, ...)|Tous types (structs, pointeurs, etc.)|
+|Accès mémoire|Contigu, aligné sur registres SIMD|Contigu sur le tas|
