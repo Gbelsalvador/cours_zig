@@ -635,3 +635,131 @@ Comparatif Récapitulatif
 |Gestion mémoire|Pile / Registres CPU|Tas (Allocateur explicite)|
 |Types supportés|Primitifs uniquement (f32, i32, ...)|Tous types (structs, pointeurs, etc.)|
 |Accès mémoire|Contigu, aligné sur registres SIMD|Contigu sur le tas|
+
+## les pointeurs
+Zig possède deux types d’indicateurs : un seul objet et un élément multiple.
+
+*T - pointeur à un seul élément vers exactement un élément.
+Prend en compte la syntaxe défif : ptr.*
+Prend en compte la syntaxe tranche : ptr[0..1]
+Prend en charge la soustraction par pointeur : ptr - ptr
+[*]T - pointeur à plusieurs éléments vers un nombre inconnu d’éléments.
+Prend en charge la syntaxe des indices : ptr[i]
+Prend en charge la syntaxe des tranches : et ptr[start..end]ptr[start..]
+Prend en charge l’arithmétique pointeur-entier : , ptr + int|ptr - int
+Prend en charge la soustraction par pointeur : ptr - ptr
+T doit avoir une taille connue, ce qui signifie qu’il ne peut pas être ou tout autre type opaque. anyopaque
+
+Ces types sont étroitement liés aux Arrays et aux Slices :
+
+*[N]T - pointeur vers N éléments, identique au pointeur d’un seul élément vers un tableau.
+Prend en charge la syntaxe des indices : array_ptr[i]
+Prend en compte la syntaxe tranche : array_ptr[start..end]
+Supports de la propriété de la lienne : array_ptr.len
+Prend en charge la soustraction par pointeur : array_ptr - array_ptr
+[]T - est une tranche (un pointeur de gros moteur, qui contient un pointeur de type et une longueur). [*]T
+Prend en charge la syntaxe des indices : slice[i]
+Prend en compte la syntaxe tranche : slice[start..end]
+Supports de la propriété de la lienne : slice.len
+À utiliser pour obtenir un pointeur à un seul élément :&x
+
+```zig
+const std = @import("std");
+
+pub fn main() void {
+    var x: i32 = 42;
+    
+    // Obtenir l'adresse avec '&'
+    const ptr: *i32 = &x;
+    
+    // Modifier la valeur pointée via '.*'
+    ptr.* = 100;
+    
+    // Pointeur constant
+    const const_ptr: *const i32 = &x;
+    // const_ptr.* = 200; // Erreur de compilation !
+}
+```
+
+```zig
+var array = [_]i32{ 10, 20, 30, 40 };
+
+// Coercion vers un pointeur multi-éléments
+const ptr: [*]i32 = &array;
+
+// Arithmétique de pointeur et indexation
+const second = ptr[1];       // 20
+const third = (ptr + 2).*;   // 30
+```
+
+### 3. Pointeur Aligné et Sentinelle ([*:valeur]T)
+Ces pointeurs étendent les pointeurs multi-éléments pour imposer des contraintes spécifiques au niveau du système :Pointeur à sentinelle ([*:0]u8) : Indique qu'un élément de fin spécifique (comme 0 ou \0) marque la fin du bloc mémoire. C'est le type exact utilisé pour les chaînes de caractères C (C-strings).Pointeur aligné (*align(N) T) : Garantit que l'adresse mémoire est un multiple de $N$ octets (très utile pour les opérations SIMD ou les accès matériel).
+
+### 4. Pointeur Optionnel (?*T) et Absence de Pointeur-Nul
+En Zig, un pointeur normal (*T) ne peut JAMAIS être nul. Le concept de NULL ou nullptr n'existe pas de façon implicite.
+
+Pour représenter la possibilité d'une absence de valeur, vous devez combiner le type optionnel ? avec un pointeur : ?*T.
+
+Le compilateur optimise cette combinaison : un ?*T occupe exactement la même taille en mémoire qu'un pointeur C (8 octets sur système 64-bit), car la valeur zéro (0x0) est réutilisée en interne pour représenter null.
+
+```zig
+var x: i32 = 10;
+var nullable_ptr: ?*i32 = &x;
+
+// Remise à zéro
+nullable_ptr = null;
+
+// Vérification et déballage (Unwrapping)
+if (nullable_ptr) |ptr| {
+    ptr.* = 20;
+} else {
+    // Traitement du cas null
+}
+```
+
+### 5. Pointeur Opaque (*anyopaque)
+Le type *anyopaque est l'équivalent du void* en C. Il représente un pointeur vers un emplacement mémoire dont le type n'est pas connu à la compilation.
+
+On l'utilise pour faire de l'abstraction de types (par exemple dans l'implémentation de std.mem.Allocator ou de vtables) et on le convertit avec @ptrCast ou @alignCast.
+
+```zig
+var data: i32 = 1234;
+const opaque_ptr: *anyopaque = &data;
+
+// Conversion explicite vers un pointeur i32
+const typed_ptr: *i32 = @ptrCast(@alignCast(opaque_ptr));
+```
+
+|Type|Description|Taille mémoire|Arithmétique autorisé ?|Sûr contre le débordement ?|
+|--|--|--|--|--|
+|*T|Pointeur vers un élément|1 adresse|Non|Oui|
+|?*T|Pointeur pouvant être null|1 adresse|Non|Oui (forcé par le type)|
+|[*]T|Pointeur vers $N$ éléments (taille inconnue)|1 adresse|Oui|Non|
+|[*:0]T|Pointeur se terminant par une sentinelle|1 adresse|Oui|Dépend de la sentinelle|
+|[]T (Slice)|Pointeur + Longueur|2 mots (ptr + len)|Via sub-slicing|Oui|
+
+en zig , volatile, l'alignement et allowzero sont des modificateurs de pointeurs et de mémoire essentiels pour la programmation système de bas niveau, l'interaction avec le matériel (MMIO) et la compatibilité FFI (C)
+
+**volatile(Empêcher l'optimisation du compilateur)** 
+Lorsque vous marquez un pointeur ou une opération de déférencement avec volatile, vous indiquez au compilateur (LLVM) que la valeur mémoire pointée peut changer à tout moment en dehors du flux normal du programme (par un périphérique matériel, un registre système, ou une interruption).
+
+Comportement :
+Le compilateur n'a pas le droit d'optimiser, de supprimer ou de réordonner les lectures et écritures.
+
+Chaque lecture/écriture explicite dans le code génère exactement une instruction d'accès mémoire dans l'exécutable final.
+
+```zig
+// Adresse d'un registre matériel de statut (Memory-Mapped I/O)
+const STATUS_REG: *volatile u32 = @ptrFromInt(0x4000_0000);
+
+pub fn waitForReady() void {
+    // Sans volatile, le compilateur lirait le registre une seule fois 
+    // et créerait une boucle infinie s'il vaut 0 au départ.
+    while (STATUS_REG.* == 0) {
+        // Attente active
+    }
+}
+```
+
+**L'Alignement (align(N))**
+L'alignement stipule que l'adresse mémoire d'une donnée doit être un multiple exact d'un nombre $N$ (où $N$ est une puissance de 2).Par défaut, Zig attribue à chaque type un alignement naturel selon l'architecture (par exemple, 4 octets pour un u32, 8 octets pour un u64). Vous pouvez forcer un alignement sur les variables, les structures et les pointeurs.
