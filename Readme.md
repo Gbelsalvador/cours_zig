@@ -1039,3 +1039,68 @@ Une tagged union associe à chaque valeur de l'enum une charge utile (payload) s
 |@tagName(e)|Retourne le nom du variant sous forme de chaîne de caractères ([]const u8).|
 |@typeInfo(E)|.enumInspecte les variants, les valeurs et les champs d'un enum à la compilation (comptime).|
 
+# OPAQUE
+En Zig, le mot-clé opaque permet de déclarer un type opaque (ou type incomplet). Un type opaque est un type dont la taille, l'alignement et la structure interne ne sont pas connus à la compilation.
+
+
+**Pourquoi utiliser opaque ?**
+Il existe deux cas d'usage principaux pour opaque en Zig :
+
+Interopérabilité avec le C (FFI / Foreign Function Interface) : Quand vous manipulez un pointeur vers un type géré par une bibliothèque C externe (ex: OpenSSL, SQLite, Win32 API), mais que vous n'avez pas besoin ou pas la possibilité de redéfinir la struct exacte en Zig.
+
+Encapsulation stricte et masquage d'implémentation : Garantir que le code client ne peut jamais accéder directement aux champs internes d'un type, mais uniquement via des fonctions dédiées en passant des pointeurs.
+
+## Règles fondamentales de opaque
+Puisque le compilateur Zig ignore la taille en mémoire d'un type opaque :
+
+**Invalide** : Vous ne pouvez pas créer une instance directe d'un type opaque sur la pile ou la mémoire globale (var x: Context = undefined; est une erreur).
+
+**Invalide** : Vous ne pouvez pas déférencer un pointeur vers un type opaque (ptr.* est une erreur).
+
+**Valide**: Vous pouvez uniquement manipuler des pointeurs vers ce type (*Context, *opaque, ?*opaque).
+
+**Interopérabilité C (FFI)**
+Imaginons une bibliothèque C qui vous fournit un pointeur opaque SDL_Window* sans exposer le contenu de la structure :
+
+```zig
+// Déclaration du type opaque côté Zig
+const SDL_Window = opaque {};
+
+// Fonctions C importées
+extern fn SDL_CreateWindow(title: [*c]const u8, x: c_int, y: c_int, w: c_int, h: c_int, flags: u32) ?*SDL_Window;
+extern fn SDL_DestroyWindow(window: *SDL_Window) void;
+
+pub fn main() void {
+    // Le pointeur window pointe vers un type opaque
+    const window = SDL_CreateWindow("Ma Fenêtre", 100, 100, 640, 480, 0) orelse return;
+
+    // On peut passer le pointeur à d'autres fonctions C
+    SDL_DestroyWindow(window);
+}
+
+```
+
+**Encapsulation avec des méthodes en Zig**
+Même si un type opaque ne possède pas de champs accessibles, il peut contenir des fonctions et des méthodes dans son espace de nom (namespace).
+
+```zig
+const std = @import("std");
+
+// Déclaration d'un type opaque pour un Handle interne
+pub const Context = opaque {
+    // Méthode associée au type opaque
+    pub fn process(self: *Context) void {
+        // Appelle du code C ou une fonction système
+        internal_c_process(self);
+    }
+};
+
+extern fn internal_c_process(ctx: *Context) void;
+```
+
+|Type|Utilisation|Équivalent C|
+|--|--|--|
+|opaque {}|Un type opaque spécifique et nommé pour la sécurité des types (type safety).|struct FOO;|
+|anyopaque|Un type opaque générique représentant n'importe quel bloc mémoire (pointeur "neutre").|void*|
+|void|Type vide ne contenant aucune donnée. Un *void n'existe pas en Zig (on utilise *anyopaque).|void|
+
