@@ -808,3 +808,60 @@ Propriété|Rôle principal|Impact à la compilation / exécution|
 |volatil|empêche l'invalidation / suppression des accès mémoire par le compilateur.|Force la génération matérielle exacte des instructions load / store.|
 |align(N)|Impose une contrainte de placement mémoire (adresse divisible par N).|Génère un code d'accès plus efficace ou requis par le processeur/SIMD.|
 |allowzero|Déclare que l'adresse 0x0 est un emplacement mémoire légitime.|Désactive le check de sûreté "adresse zéro" sans introduire le type optionnel null.|
+
+# SLICE (ou TRANCHE)
+est un pointeur associé à une longueur c'est une vue dynamique sur une senquence contigue d'elements stockés en memoire (comme un tabeleau ou un buffer)
+Contrairement à un pointeur simple (*T), un slice sait combien d'éléments il référence, ce qui permet à Zig d'effectuer des vérifications de bornes (bounds checking) à l'exécution et d'éviter les débordements de mémoire.
+
+La syntaxe d'un type slice s'écrit []T (où T est le type des éléments) :
+
+Slice mutable ([]T) : permet de lire et modifier les éléments.
+
+Slice constant ([]const T) : permet uniquement la lecture.
+En mémoire, un slice occupe la taille de 2 pointeurs (soit 16 octets sur une architecture 64-bit) :
+
+Un pointeur vers le premier élément (ptr).
+
+La longueur sous forme d'entier non signé (len).
+```zig
+const std = @import("std");
+
+pub fn main() void {
+    // Un tableau statique sur la pile
+    var array = [_]i32{ 10, 20, 30, 40, 50 };
+
+    // On crée un slice à partir du tableau (de l'index 1 à 4 exclu)
+    const slice: []i32 = array[1..4];
+
+    // slice.len == 3
+    // slice[0] vaut 20, slice[1] vaut 30, slice[2] vaut 40
+}
+```
+
+**2. Distinction importante : Array, Pointer et Slice**
+|Type|Syntaxe|Taille connue à la compilation ?|Stocke la longueur en mémoire |
+|?Array (Tableau)|[5]i32|Oui (fait partie du type)|Non (intégré dans le type)|
+|Pointer (Pointeur unique)|*i32|Non (pointe sur 1 élément)|Non|
+|Slice|[]i32|Non (déterminée à l'exécution)|Oui (ptr + len)|
+
+**3. Fonctionnalités clés des Slices en Zig**
+A. Tranchage dynamique (Slicing)
+La syntaxe container[start..end] permet d'extraire une vue :
+
+start est l'index de début (inclus).
+
+end est l'index de fin (exclus).
+
+Si les bornes sont connues à la compilation, Zig peut caster automatiquement le slice vers un pointeur de tableau à taille fixe (*[N]T).
+
+### Slices avec terminaison nulle (Sentinel-Terminated Slices)
+Pour interagir avec le C (strings terminées par \0), Zig propose des slices sentinelles sous la forme [:0]const u8. La longueur ne compte pas le caractère nul final, mais le compilateur garantit que slice[slice.len] == 0.
+
+### Slices de constantes et chaînes de caractères
+En Zig, les littéraux de chaîne (ex: "Hello") sont de type *const [5:0]u8. Lorsqu'ils sont passés à des fonctions acceptant des slices, ils se coerced (se convertissent) de façon transparente en []const u8.
+
+```zig
+fn printString(s: []const u8) void {
+    std.debug.print("Texte: {s}, Taille: {d}\n", .{ s, s.len });
+}
+```
