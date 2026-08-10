@@ -944,3 +944,8 @@ pub fn main() void {
     _ = node;
 }
 ```
+
+## TUPLE
+En Zig, un tuple est une structure anonyme dont les champs sont automatiquement nommés par leur index numérique (0, 1, 2, etc.).
+
+Les tuples sont très utilisés pour regrouper plusieurs valeurs de types différents sans avoir à déclarer une struct nommée au préalable, notamment pour la métaprogrammation avec comptime ou pour passer des arguments à des fonctions de formatage comme std.debug.print.
