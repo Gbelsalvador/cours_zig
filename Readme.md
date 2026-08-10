@@ -805,6 +805,6 @@ Différence cruciale avec ?*T :
 Tableau Récapitulatif
 Propriété|Rôle principal|Impact à la compilation / exécution|
 |--|--|--|
-|volatilmpêche l'invalidation / suppression des accès mémoire par le compilateur.	Force la génération matérielle exacte des instructions load / store.
-align(N)	Impose une contrainte de placement mémoire (adresse divisible par N).	Génère un code d'accès plus efficace ou requis par le processeur/SIMD.
-allowzero	Déclare que l'adresse 0x0 est un emplacement mémoire légitime.	Désactive le check de sûreté "adresse zéro" sans introduire le type optionnel null.
+|volatil|empêche l'invalidation / suppression des accès mémoire par le compilateur.|Force la génération matérielle exacte des instructions load / store.|
+|align(N)|Impose une contrainte de placement mémoire (adresse divisible par N).|Génère un code d'accès plus efficace ou requis par le processeur/SIMD.|
+|allowzero|Déclare que l'adresse 0x0 est un emplacement mémoire légitime.|Désactive le check de sûreté "adresse zéro" sans introduire le type optionnel null.|
