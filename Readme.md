@@ -865,3 +865,82 @@ fn printString(s: []const u8) void {
     std.debug.print("Texte: {s}, Taille: {d}\n", .{ s, s.len });
 }
 ```
+
+## STRUC
+En Zig, la struct (structure) est le bloc de construction fondamental. Contrairement à des langages comme le C++ ou Java, Zig n'a pas de classes ou d'héritage : tout est basé sur les struct, qui regroupent à la fois des données (champs) et des comportements (fonctions).
+
+Zig propose trois variantes spéciales de struct selon l'usage mémoire et l'interopérabilité.
+
+**Struct classique (par défaut)**
+Réordonne automatiquement les champs pour optimiser l'alignement en mémoire et réduire le padding.
+
+L'ordre des champs en mémoire n'est pas garanti.
+
+**extern struct (Compatible C)**
+Conserve exactement l'ordre des champs défini dans le code.
+
+Suit la convention d'alignement/padding du C de la plateforme cible.
+
+Essentiel pour le FFI (interopérabilité C) et les appels système.
+```zig
+const C_Header = extern struct {
+    magic: u32,
+    payload_size: u16,
+    flags: u8,
+};
+
+```
+
+**packed struct (Contrôle au bit près)**
+Aucun padding mémoire.
+
+Permet de mapper directement des registres matériels ou des formats binaires compacts jusqu'au niveau du bit.
+
+```zig
+const StatusRegister = packed struct {
+    enabled: bool,      // 1 bit
+    ready: bool,        // 1 bit
+    mode: u3,           // 3 bits
+    _reserved: u3 = 0,  // 3 bits de bourrage
+}; // Taille totale = 8 bits (1 octet)
+```
+
+**Structs Anonymes et Tuples**
+Zig prend en charge la création de structs sans type prédéfini à la volée via la syntaxe
+```zig
+// Struct anonyme nommée
+const config = .{
+    .port = 8080,
+    .host = "127.0.0.1",
+};
+
+// Tuple (struct anonyme avec champs numérotés)
+const tuple = .{ 42, "hello", true };
+// Accès : tuple[0] (42), tuple[1] ("hello")
+```
+
+**Metaprogramming : Generic Structs avec Comptime**
+Il n'y a pas de mot-clé template ou generic en Zig. La généricité est réalisée en écrivant une fonction exécutée à la compilation (comptime) qui retourne un type struct.
+
+```zig
+fn Node(comptime T: type) type {
+    return struct {
+        data: T,
+        next: ?*Node(T) = null, // Liste chaînée générique
+
+        const Self = @this(); // Référence au type courant
+
+        pub fn init(data: T) Self {
+            return Self{ .data = data };
+        }
+    };
+}
+
+pub fn main() void {
+    // Génère le type Node pour les i32
+    const IntNode = Node(i32);
+    var node = IntNode.init(100);
+
+    _ = node;
+}
+```
