@@ -994,3 +994,48 @@ Vous pouvez dupliquer le contenu d'un tuple avec l'opérateur ** :
 ```zig
 const t = .{ 42, "abc" } ** 2; // Equivalent à .{ 42, "abc", 42, "abc" }
 ```
+
+# ENUM (enumeration)
+est un type de première classe qui permet de définir une liste de valeurs distinctes et nommées (les tags).
+
+Zig pousse les enums plus loin que le C en offrant la sécurité des types, l'intégration des méthodes, l'interopérabilité avec les types entiers et les tagged unions (unions étiquetées).
+
+NB : Exhaustivité du switch : En Zig, un switch sur un enum doit couvrir toutes les valeurs possibles. Si une valeur manque, le code ne compile pas (sauf si vous ajoutez une branche else).
+
+Par défaut, Zig choisit automatiquement le type entier le plus petit possible pour stocker l'enum. Vous pouvez cependant forcer un type entier (ex: u8, u16, i32) en le précisant dans la définition :
+
+```zig
+const std = @import("std");
+
+// L'enum utilise explicitement un u8 en mémoire
+const HttpStatus = enum(u16) {
+    ok = 200,
+    created = 201,
+    not_found = 404,
+    internal_server_error = 500,
+};
+
+pub fn main() void {
+    const code = HttpStatus.not_found;
+
+    // Convertir un enum vers son entier sous-jacent (@intFromEnum)
+    const raw_code = @intFromEnum(code); // 404
+
+    // Convertir un entier vers un enum (@enumFromInt)
+    const status: HttpStatus = @enumFromInt(200); // .ok
+    _ = status;
+}
+```
+
+Le cas d'usage le plus puissant des enums en Zig est de servir d'étiquette (tag) pour une union. C'est ce qui équivaut à un enum en Rust ou un type algébrique de données (ADT).
+
+Une tagged union associe à chaque valeur de l'enum une charge utile (payload) spécifique :
+
+## 5. Fonctions built-inpratiques pour les Enums
+|Fonction built-in|Rôle / Description|
+|--|--|
+|@intFromEnum(e)|Convertit un enum en son entier correspondant.|
+|@enumFromInt(i)|Convertit un entier en valeur enum (déclenche un safety panic si la valeur n'existe pas)|
+|@tagName(e)|Retourne le nom du variant sous forme de chaîne de caractères ([]const u8).|
+|@typeInfo(E)|.enumInspecte les variants, les valeurs et les champs d'un enum à la compilation (comptime).|
+
