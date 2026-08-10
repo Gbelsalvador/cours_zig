@@ -949,3 +949,48 @@ pub fn main() void {
 En Zig, un tuple est une structure anonyme dont les champs sont automatiquement nommés par leur index numérique (0, 1, 2, etc.).
 
 Les tuples sont très utilisés pour regrouper plusieurs valeurs de types différents sans avoir à déclarer une struct nommée au préalable, notamment pour la métaprogrammation avec comptime ou pour passer des arguments à des fonctions de formatage comme std.debug.print.
+
+Un tuple s'instancie avec la syntaxe de littéral anonyme .{ ... }. Son type est automatiquement déduit par le compilateur sous la forme d'une struct anonyme avec des champs indexés.
+
+**Accès aux champs à la compilation (comptime)**
+Même si la syntaxe d'accès ressemble à celle d'un tableau (tuple[i]), les tuples ne sont pas des tableaux.
+
+Puisque chaque élément d'un tuple peut avoir un type différent, l'index utilisé pour accéder à un champ doit être connu à la compilation (comptime).
+
+```zig
+const tuple = .{ 10, "test" };
+
+// ❌ ERREUR DE COMPILATION : 'i' est une variable d'exécution (runtime)
+var i: usize = 0;
+_ = tuple[i]; 
+
+// ✅ CORRECT : 'i' est comptime ou directement un littéral
+const i_comptime: usize = 0;
+_ = tuple[i_comptime];
+```
+
+Un tuple possède une propriété spécifique : ses champs sont nommés "0", "1", "2", etc. Vous pouvez vérifier la nature d'un tuple à la compilation en inspectant son type via @typeInfo :
+
+```zig
+const std = @import("std");
+
+fn isTuple(comptime T: type) bool {
+    const info = @typeInfo(T);
+    return if (info == .struct) info.struct.is_tuple else false;
+}
+```
+
+Comme pour les tableaux, vous pouvez concaténer deux tuples à la compilation grâce à l'opérateur ++ :
+
+```zig
+const t1 = .{ 1, 2 };
+const t2 = .{ "trois", true };
+
+const t3 = t1 ++ t2; // Equivalent à .{ 1, 2, "trois", true }
+```
+
+Vous pouvez dupliquer le contenu d'un tuple avec l'opérateur ** :
+
+```zig
+const t = .{ 42, "abc" } ** 2; // Equivalent à .{ 42, "abc", 42, "abc" }
+```
