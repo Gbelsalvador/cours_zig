@@ -1104,3 +1104,73 @@ extern fn internal_c_process(ctx: *Context) void;
 |anyopaque|Un type opaque générique représentant n'importe quel bloc mémoire (pointeur "neutre").|void*|
 |void|Type vide ne contenant aucune donnée. Un *void n'existe pas en Zig (on utilise *anyopaque).|void|
 
+# UNION
+est un type de donnée composite qui permet de stocker une seule valeur parmi plusieurs types possibles dans un même espace mémoire. La taille de l'union correspond à la taille de son plus grand champ
+
+Zig propose trois façons principales de manipuler et de sécuriser les unions :
+**L'Union Untagged (Non étiquetée)**
+C'est la forme la plus basique, similaire à celle du langage C. Le compilateur ne conserve aucune trace du champ actuellement actif.
+
+**L'Union Tagged (Étiquetée ou Tagguée)**
+C'est la forme la plus utilisée et la plus sûre en Zig. Elle associe un enum à l'union pour savoir exactement quel champ est actif à la durée d'exécution.
+
+**A. Tag automatique**
+Vous pouvez laisser Zig générer l'enum automatiquement en utilisant union(enum) :
+
+```zig
+const std = @import("std");
+
+const Payload = union(enum) {
+    int: i64,
+    float: f64,
+    text: []const u8,
+};
+
+pub fn main() void {
+    const data = Payload{ .text = "Hello Zig" };
+
+    // On utilise un bloc `switch` pour inspecter la valeur en toute sécurité
+    switch (data) {
+        .int => |val| std.debug.print("Entier: {d}\n", .{val}),
+        .float => |val| std.debug.print("Flottant: {d}\n", .{val}),
+        .text => |val| std.debug.print("Texte: {s}\n", .{val}),
+    }
+}
+```
+**B. Tag explicite avec un Enum personnalisé**
+Si vous avez déjà un enum défini, vous pouvez le lier directement à l'union :
+
+```zig
+const Tag = enum {
+    a,
+    b,
+};
+
+const Value = union(Tag) {
+    a: u32,
+    b: f32,
+};
+```
+**3. L'Union Extern et Bare**
+Pour l'interopérabilité avec le C (FFI) ou la programmation système bas niveau :
+
+extern union : Respecte la disposition mémoire et l'alignement C du compilateur cible.
+
+packed union : Empaquette les champs au bit près (très utile pour interagir directement avec des registres matériels ou des formats de fichiers spécifiques).
+
+```zig
+const Register = packed union {
+    raw: u8,
+    flags: packed struct {
+        enable: u1,
+        ready: u1,
+        padding: u6,
+    },
+};
+```
+Points clés à retenir
+Sécurité à la compilation et à l'exécution : En mode Debug ou ReleaseSafe, accéder au mauvais champ d'une union non tagguée ou mal basculée déclenche une panique (safety-checked undefined behavior).
+
+Combinaison avec switch : Les unions tagguées s'associent parfaitement avec le bloc switch. Le compilateur vérifie que tous les cas de l'union sont traités.
+
+Pointeurs vers les champs : Il est possible de capturer la valeur par référence dans un switch en utilisant |*val| pour modifier directement la donnée interne.
