@@ -1174,3 +1174,38 @@ Sécurité à la compilation et à l'exécution : En mode Debug ou ReleaseSafe, 
 Combinaison avec switch : Les unions tagguées s'associent parfaitement avec le bloc switch. Le compilateur vérifie que tous les cas de l'union sont traités.
 
 Pointeurs vers les champs : Il est possible de capturer la valeur par référence dans un switch en utilisant |*val| pour modifier directement la donnée interne.
+
+# BLOCK {}
+sert à regrouper des instructions, limiter la portée (scope) des variables, et peut retourner une valeur comme une expression.
+
+Voici les différents cas d'usage et fonctionnalités des blocs en Zig.
+**Blocs basiques et Portée (Scope)**
+Tout bloc crée son propre espace de portée. Les variables déclarées à l'intérieur ne sont pas accessibles à l'extérieur.
+
+```zig
+const std = @import("std");
+
+pub fn main() void {
+    const x: i32 = 10;
+    {
+        const y: i32 = 20;
+        std.debug.print("x + y = {d}\n", .{x + y});
+    }
+    // y n'est plus accessible ici : erreur de compilation
+}
+```
+**Blocs étiquetés avec valeur de retour (break :label)**
+C'est l'une des fonctionnalités les plus puissantes de Zig : un bloc peut être nommé avec une étiquette (label: { ... }) et retourner une valeur grâce à break :label valeur;.
+
+**Gestion des erreurs dans les blocs (try et catch)**
+Les blocs étiquetés servent souvent à isoler du code qui peut renvoyer une erreur sans stopper toute la fonction :
+
+**Struct / Comptage d'allocations de mémoire**
+En programmation système, les blocs permettent d'isoler la durée de vie d'un allocateur ou de vérifier qu'il n'y a pas de fuites mémoire (memory leaks) :
+
+Points clés à retenir
+Pas de eval ou de syntaxe complexe : Les blocs étiquetés remplacent l'usage de fonctions anonymes ou de lambdas complexes pour l'initialisation de variables.
+
+Syntaxe stricte : L'étiquette commence par un identifiant suivi de deux-points (ex: mon_bloc: { ... }).
+
+break explicite : Pour sortir d'un bloc avec une valeur, la syntaxe est break :nom_du_bloc valeur;.
