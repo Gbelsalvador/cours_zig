@@ -1209,3 +1209,82 @@ Pas de eval ou de syntaxe complexe : Les blocs étiquetés remplacent l'usage de
 Syntaxe stricte : L'étiquette commence par un identifiant suivi de deux-points (ex: mon_bloc: { ... }).
 
 break explicite : Pour sortir d'un bloc avec une valeur, la syntaxe est break :nom_du_bloc valeur;.
+
+
+# SWITCH FOR WHILE INLINE
+
+**SWITCH** : en zig est une expression (il peut retourner une valeur) et doit etre exhaustif tous les cas possible doit etre traiter 
+
+```zig
+const score: u8 = 85;
+const grade = switch (score) {
+    0...50 => 'F',
+    51...75 => 'C',
+    76...90 => 'B',
+    91...100 => 'A',
+    else => 'X', // Obligatoire si toutes les valeurs ne sont pas couvertes
+};
+```
+il excelle aussi pour depiler les unions etiquetées et capturer la valeur contenu
+
+```zig
+const Payload = union(enum) {
+    int: i32,
+    float: f32,
+    none,
+};
+
+const data = Payload{ .int = 42 };
+switch (data) {
+    .int => |value| std.debug.print("Entier : {}\n", .{value}),
+    .float => |value| std.debug.print("Float : {}\n", .{value}),
+    .none => {},
+}
+
+```
+
+**la boucle for** sert à parcourir des tableaux , tranches(slices) ou plages de nombres
+
+```zig
+const items = [_]i32{ 10, 20, 30 };
+
+// Capture de l'élément et de l'index
+for (items, 0..) |item, index| {
+    std.debug.print("Index {}: {}\n", .{ index, item });
+}
+```
+boucle sur une plage numerique
+```zig
+for (0..5) |i| {
+    // Boucle de 0 à 4
+}
+```
+
+la boucle **while** elle gere la condition classique mais excelle pour derouler des pointeurs ou traiter des erreurs/optionnels
+
+```zig
+var i: usize = 0;
+while (i < 5) : (i += 1) { // L'expression : (i += 1) s'exécute à chaque fin de tour
+    std.debug.print("{}\n", .{i});
+}
+```
+
+```zig
+var iter = iterator.next();
+while (iter) |valeur| : (iter = iterator.next()) {
+    // S'exécute tant que iter n'est pas null
+}
+```
+
+**inline** force le compilateur à remplacer un appel de fonction, une boucle ou du code assembleur directement sur place, permettant des optimisations et la manipulation de types au moment de la compilation.
+inline for et inline while: Obligatoire pour itérer sur un tuple ou une structure où les types changent à chaque élément, ou pour optimiser les performances en supprimant le coût d'une boucle
+
+```zig
+const types_tuple = .{ i32, f64, bool };
+
+// Génère le code pour chaque type à la compilation
+inline for (types_tuple) |T| {
+    std.debug.print("Taille : {}\n", .{@sizeOf(T)});
+}
+```
+inline switch : orce le compilateur à générer du code spécifique pour chaque branche du switch au lieu de créer une table de saut dynamique.
