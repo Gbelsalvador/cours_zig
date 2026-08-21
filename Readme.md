@@ -193,7 +193,15 @@ const json_exemple =
     \\}
 ;
 ```
+## AFFECTATION :
+syntaxte
+```bash
+(const | var) identifier[: type] = value
+```
 
+const : indique que est une constante qui stocke un immuable value
+var : indique que est une variable qui stocke un mutable value
+: type est une annotation de type pour, et peut-etre omise si les données type de type peut etre deduit
 ## formatage {}
 
 les symboles **{}** en zig sert à specifier le format d'affichage d'un variable
@@ -460,6 +468,11 @@ pub fn main() void {
     var buffer: [100]u8 = [_]u8{0} ** 100; // 100 octets initialisés à 0
 }
 ```
+
+pour obtenir la taille d'un tableau faut faire 
+```zig
+const length = array.len
+```
 **operation de compilation (++ et **)**
 
 Zig propose deux opérateurs d'enchaînement exécutables uniquement sur des valeurs connues à la compilation :
@@ -716,7 +729,50 @@ if (nullable_ptr) |ptr| {
     // Traitement du cas null
 }
 ```
+en ZIG 0.16 l'utilisation de if avec des pointeurs optionnels est un outil puissant pour la perfomance elle permet d'eviter les copies de memoire inutiles et de modifier directement la donnée pointée
+pour capturer un pointeur plutot qu'une copie de la valeur il suffit d'ajouter une asterisque * devant le nom de la variable capturée : |*capture| 
+exemple 1 : modifier une structure voa un pointeur optionnel
+```zig
+const std = @import("std");
 
+const Joueur = struct {
+    nom: []const u8,
+    score: u32,
+};
+
+pub fn main() void {
+    var joueur_reel = Joueur{ .nom = "Alice", .score = 10 };
+    
+    // Un pointeur optionnel vers notre structure joueur
+    var joueur_optionnel: ?*Joueur = &joueur_real;
+
+    // Capture par pointeur : 'j' devient un pointeur direct (*Joueur) vers 'joueur_reel'
+    if (joueur_optionnel) |j| {
+        // En Zig, le déréférencement est automatique pour l'accès aux champs d'un pointeur
+        j.score += 5; 
+        std.debug.print("{s} a maintenant {} points.\n", .{ j.nom, j.score });
+    } else {
+        std.debug.print("Aucun joueur trouvé.\n", .{});
+    }
+
+    // Vérification : la structure d'origine a bien été modifiée
+    std.debug.print("Score final de joueur_reel : {}\n", .{joueur_reel.score});
+}
+```
+
+exemple 2 capture par pointeur constant (*const)
+Si votre pointeur d'origine pointe vers une donnée en lecture seule (const), la capture s'adaptera automatiquement en un pointeur constant (*const T). Toute tentative de modification provoquera une erreur de compilation.
+
+```zig
+const joueur_constant = Joueur{ .nom = "Bob", .score = 20 };
+var ptr_opt: ?*const Joueur = &joueur_constant;
+
+if (ptr_opt) |j| {
+    // j.score += 5; // ERREUR DE COMPILATION : cannot assign to constant
+    std.debug.print("Score de {s} : {}\n", .{j.nom, j.score});
+}
+
+```
 ### 5. Pointeur Opaque (*anyopaque)
 Le type *anyopaque est l'équivalent du void* en C. Il représente un pointeur vers un emplacement mémoire dont le type n'est pas connu à la compilation.
 
@@ -809,7 +865,7 @@ Propriété|Rôle principal|Impact à la compilation / exécution|
 |align(N)|Impose une contrainte de placement mémoire (adresse divisible par N).|Génère un code d'accès plus efficace ou requis par le processeur/SIMD.|
 |allowzero|Déclare que l'adresse 0x0 est un emplacement mémoire légitime.|Désactive le check de sûreté "adresse zéro" sans introduire le type optionnel null.|
 
-# SLICE (ou TRANCHE)
+## SLICE (ou TRANCHE)
 est un pointeur associé à une longueur c'est une vue dynamique sur une senquence contigue d'elements stockés en memoire (comme un tabeleau ou un buffer)
 Contrairement à un pointeur simple (*T), un slice sait combien d'éléments il référence, ce qui permet à Zig d'effectuer des vérifications de bornes (bounds checking) à l'exécution et d'éviter les débordements de mémoire.
 
@@ -866,7 +922,7 @@ fn printString(s: []const u8) void {
 }
 ```
 
-## STRUC
+## STRUCT
 En Zig, la struct (structure) est le bloc de construction fondamental. Contrairement à des langages comme le C++ ou Java, Zig n'a pas de classes ou d'héritage : tout est basé sur les struct, qui regroupent à la fois des données (champs) et des comportements (fonctions).
 
 Zig propose trois variantes spéciales de struct selon l'usage mémoire et l'interopérabilité.
@@ -995,7 +1051,7 @@ Vous pouvez dupliquer le contenu d'un tuple avec l'opérateur ** :
 const t = .{ 42, "abc" } ** 2; // Equivalent à .{ 42, "abc", 42, "abc" }
 ```
 
-# ENUM (enumeration)
+## ENUM (enumeration)
 est un type de première classe qui permet de définir une liste de valeurs distinctes et nommées (les tags).
 
 Zig pousse les enums plus loin que le C en offrant la sécurité des types, l'intégration des méthodes, l'interopérabilité avec les types entiers et les tagged unions (unions étiquetées).
@@ -1039,7 +1095,7 @@ Une tagged union associe à chaque valeur de l'enum une charge utile (payload) s
 |@tagName(e)|Retourne le nom du variant sous forme de chaîne de caractères ([]const u8).|
 |@typeInfo(E)|.enumInspecte les variants, les valeurs et les champs d'un enum à la compilation (comptime).|
 
-# OPAQUE
+## OPAQUE
 En Zig, le mot-clé opaque permet de déclarer un type opaque (ou type incomplet). Un type opaque est un type dont la taille, l'alignement et la structure interne ne sont pas connus à la compilation.
 
 
@@ -1104,7 +1160,7 @@ extern fn internal_c_process(ctx: *Context) void;
 |anyopaque|Un type opaque générique représentant n'importe quel bloc mémoire (pointeur "neutre").|void*|
 |void|Type vide ne contenant aucune donnée. Un *void n'existe pas en Zig (on utilise *anyopaque).|void|
 
-# UNION
+## UNION
 est un type de donnée composite qui permet de stocker une seule valeur parmi plusieurs types possibles dans un même espace mémoire. La taille de l'union correspond à la taille de son plus grand champ
 
 Zig propose trois façons principales de manipuler et de sécuriser les unions :
@@ -1175,7 +1231,7 @@ Combinaison avec switch : Les unions tagguées s'associent parfaitement avec le 
 
 Pointeurs vers les champs : Il est possible de capturer la valeur par référence dans un switch en utilisant |*val| pour modifier directement la donnée interne.
 
-# BLOCK {}
+## BLOCK {}
 sert à regrouper des instructions, limiter la portée (scope) des variables, et peut retourner une valeur comme une expression.
 
 Voici les différents cas d'usage et fonctionnalités des blocs en Zig.
@@ -1211,7 +1267,7 @@ Syntaxe stricte : L'étiquette commence par un identifiant suivi de deux-points 
 break explicite : Pour sortir d'un bloc avec une valeur, la syntaxe est break :nom_du_bloc valeur;.
 
 
-# SWITCH FOR WHILE INLINE
+## SWITCH FOR WHILE INLINE
 
 **SWITCH** : en zig est une expression (il peut retourner une valeur) et doit etre exhaustif tous les cas possible doit etre traiter 
 
@@ -1275,10 +1331,88 @@ while (iter) |valeur| : (iter = iterator.next()) {
     // S'exécute tant que iter n'est pas null
 }
 ```
+parcourir et modifier une liste chainée:
+Grâce à while et la capture par pointeur |*noeud|, on peut traverser une liste et modifier la valeur de chaque élément directement en mémoire sans aucune copie intermédiaire.
+```zig
+const std = @import("std");
 
+const Noeud = struct {
+    valeur: i32,
+    suivant: ?*Noeud, // Pointeur optionnel vers le noeud suivant
+};
+
+pub fn main() void {
+    // Création de 3 nœuds liés entre eux
+    var n3 = Noeud{ .valeur = 30, .suivant = null };
+    var n2 = Noeud{ .valeur = 20, .suivant = &n3 };
+    var n1 = Noeud{ .valeur = 10, .suivant = &n2 };
+
+    // On commence avec un pointeur optionnel vers le premier nœud
+    var courant_opt: ?*Noeud = &n1;
+
+    // La boucle continue TANT QUE courant_opt n'est pas 'null'.
+    // À chaque tour, 'n' est un pointeur direct (*Noeud) vers l'élément en cours.
+    while (courant_opt) |n| {
+        // 1. On modifie la valeur directement en mémoire
+        n.valeur += 5;
+        
+        std.debug.print("Nœud modifié - Nouvelle valeur : {}\n", .{n.valeur});
+
+        // 2. On avance au nœud suivant (qui peut être un pointeur ou null)
+        courant_opt = n.suivant;
+    }
+}
+
+```
+NB :Une erreur fréquente lorsque l'on débute en Zig consiste à essayer d'avancer dans la liste en réassignant directement la variable capturée.
+
+```zig
+while (courant_opt) |n| {
+    // n = n.suivant; 
+    // ERREUR DE COMPILATION ! 'n' est une copie locale de l'adresse (pointeur).
+    // Modifier 'n' ne fait pas avancer la boucle 'while' externe.
+    
+    // Un pointeur capturé permet de modifier la *donnée pointée*, 
+    // pas la condition de la boucle elle-même.
+}
+
+```
+
+c'est possible d'utiliser while avec else en zig 0.16
+
+Ce bloc s'exécute une seule fois, immédiatement après que la condition du while soit devenue fausse (lorsqu'elle a reçu null ou une erreur)
+
+```zig
+var ptr_opt: ?*i32 = null;
+
+while (ptr_opt) |ptr| {
+    // Ce code ne s'exécutera pas car ptr_opt est nul dès le départ
+    _ = ptr;
+} else {
+    // S'exécute directement car la condition initiale était nulle / fausse
+    std.debug.print("La boucle s'est terminée ou n'a jamais commencé.\n", .{});
+}
+
+```
 **inline** force le compilateur à remplacer un appel de fonction, une boucle ou du code assembleur directement sur place, permettant des optimisations et la manipulation de types au moment de la compilation.
-inline for et inline while: Obligatoire pour itérer sur un tuple ou une structure où les types changent à chaque élément, ou pour optimiser les performances en supprimant le coût d'une boucle
 
+**inline if** : Si la condition de votre if est connue dès la compilation, le compilateur Zig élimine complètement la branche morte lors de la génération du binaire (optimisation agressive du code). Vous pouvez même forcer ce comportement avec comptime if pour conditionner la création de types ou de structures
+```zig
+const mode_debug = true;
+
+// Évalué à la compilation
+comptime {
+    if (mode_debug) {
+        // Ce code sera inclus dans le binaire final
+    } else {
+        // Ce code sera totalement ignoré et retiré du binaire
+    }
+}
+
+```
+**inline for** et **inline while** : Obligatoire pour itérer sur un tuple ou une structure où les types changent à chaque élément, ou pour optimiser les performances en supprimant le coût d'une boucle et aussi derouler entieremenet la boucke à la compilation
+
+**inline fn** ; force l'insertion du corps de la fonction à chaque endroit ou elle est appelée pour eviter la surcharge d'un appel standard
 ```zig
 const types_tuple = .{ i32, f64, bool };
 
@@ -1288,3 +1422,71 @@ inline for (types_tuple) |T| {
 }
 ```
 inline switch : orce le compilateur à générer du code spécifique pour chaque branche du switch au lieu de créer une table de saut dynamique.
+
+## IF 
+les instrucrions if acceptent  des valeurs contraiment au langage comme C et javascrpt il n'existe pas de valeurs qui contraignent implicitement les valeurs boll
+
+```zig
+const expect = @import("std").testing.expect;
+
+test "if statement" {
+    const a = true;
+    var x: u16 = 0;
+    if (a) {
+        x += 1;
+    } else {
+        x += 2;
+    }
+    try expect(x == 1);
+}
+```
+en zig if aussi est une expression c'est à dire qu'il evalue et retourne toujours une valeur et il est massivement surchargé pour gerer nativement la securité de types (pointeurs optionnels et erreurs)
+```zig
+const condition = true;
+// if renvoie une valeur directement assignée à 'resultat'
+const resultat = if (condition) @as(u32, 100) else @as(u32, 0);
+```
+NB : *Si vous utilisez if pour assigner une valeur, le bloc else est strictement obligatoire et les deux branches doivent retourner exactement le même type*
+
+```zig
+test "if statement expression" {
+    const a = true;
+    var x: u16 = 0;
+    x += if (a) 1 else 2;
+    try expect(x == 1);
+}
+```
+
+Zig n'a pas de valeur null globale. Pour qu'une variable puisse être nulle, son type doit être optionnel (précédé d'un ?). On utilise le if avec une capture de variable (la syntaxe |valeur|) pour extraire de manière sûre cette donnée.
+
+```zig
+var arg_optionnel: ?[]const u8 = "Zig 0.16";
+
+if (arg_optionnel) |texte| {
+    // Si la valeur n'est pas nulle, 'texte' est disponible ici (type: []const u8)
+    std.debug.print("Contenu : {s}\n", .{texte});
+} else {
+    // Si la valeur est nulle
+    std.debug.print("La valeur est nulle.\n", .{});
+}
+
+```
+
+**CAPTURE D'ERREURS(!T)**
+de la meme maniere lorsqu'une fonction peut renvoyer une erreur son type de retour est une *ERROR UNION*(precede d'un !) le if permet de capturer la valeur en cas de succes ou de laisser le bloc else intercepter l'erreur si elle survient
+
+```zig
+fn verifierNombre(n: i32) !i32 {
+    if (n < 0) return error.NombreNegatif;
+    return n * 2;
+}
+
+// Dans votre code :
+if (verifierNombre(10)) |valeur_ok| {
+    std.debug.print("Succès : {}\n", .{valeur_ok});
+} else |err| {
+    // En cas d'erreur, 'err' contient le code d'erreur
+    std.debug.print("Une erreur est survenue : {}\n", .{err});
+}
+
+```
