@@ -1490,3 +1490,108 @@ if (verifierNombre(10)) |valeur_ok| {
 }
 
 ```
+# FONCTIONS 
+Tous les arguments de fonction sont immuables – si une copie est désirée, l’utilisateur doit Faites-en explicitement un. Contrairement aux variables, qui sont **snake_case**, les fonctions sont **camelCase**. Voici un exemple de déclaration et d’appel d’une fonction simple.
+
+```zig
+fn addFive(x: u32) u32 {
+    return x + 5;
+}
+
+test "function" {
+    const y = addFive(0);
+    try expect(@TypeOf(y) == u32);
+    try expect(y == 5);
+}
+```
+**la recursion**
+
+```zig
+fn fibonacci(n: u16) u16 {
+    if (n == 0 or n == 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+test "function recursion" {
+    const x = fibonacci(10);
+    try expect(x == 55);
+}
+```
+NB : Lors de la récursion, le compilateur n’est plus capable de calculer le maximum taille de la pile, ce qui peut entraîner un comportement dangereux - un débordement de pile. Détails sur La manière d’obtenir une récursion sûre sera abordée à l’avenir.
+
+## DEFER 
+il est utilise pour executer une instruction à la sortie du bloc courant
+
+st utile pour s’assurer que les ressources sont épurées lorsqu’elles ne sont plus nécessaires. Au lieu de devoir se souvenir de libérer manuellement la ressource (libération de mémoire, fermeture de fichiers, déverrouillage de mutex), Vous pouvez ajouter une instruction de report juste à côté de celle qui alloue la ressource.
+
+exe l'allocation et liberation de memoire 
+nb : En Zig, la gestion de la mémoire est explicite. Dès que vous allouez de la mémoire, vous écrivez immédiatement un defer juste en dessous pour ne jamais oublier de la libérer.
+
+```zig
+const std = @import("std");
+
+// On passe 'init' en paramètre : c'est ça le Juicy Main !
+pub fn main(init: std.process.Init) !void {
+    // Plus besoin de configurer manuellement un Allocator ni de faire deinit().
+    // Zig s'occupe de tout injecter proprement via 'init'.
+    const allocator = init.gpa;
+
+    // Allocation de notre tranche (slice) de 10 entiers
+    const slice = try allocator.alloc(i32, 10);
+    defer allocator.free(slice);
+
+    // Utilisation de la mémoire
+    slice[0] = 42;
+    std.debug.print("Valeur via Juicy Main : {}\n", .{slice[0]});
+    
+    // const arena = init.arena;
+    // const io = init.io;
+}
+
+```
+
+## ALLOCATION DYNAMIQUE D'UN TABLEAU OU SLICE
+
+Dans Zig 0.16, l'expression try allocator.alloc(T, count) reste le moyen universel d'allouer dynamiquement un tableau ou une tranche de mémoire (slice) sur le tas (heap).
+
+const slice = try allocator.alloc(i32, 10);
+
+1 - allocator(interface) :  Contrairement à d'autres langages qui cachent la gestion mémoire derrière un mot-clé global (malloc, new), Zig vous oblige à passer explicitement un objet allocateur. Avec le Juicy Main de Zig 0.16, cet allocateur est fourni directement par le système via init.gpa ou init.arena
+
+2 -.alloc(Type, Nombre) (La méthode) : C'est la fonction qui demande au système de réserver un espace contigu en mémoire.Elle prend le type d'élément souhaité (ici i32).Elle prend la quantité dynamique d'éléments désirée (ici 10).En cas de succès, elle retourne une Tranche (Slice) de type []i32 dont la taille (slice.len) est exactement égale à 10.
+
+3-try (La gestion d'erreur obligatoire) :Allouer de la mémoire peut échouer si l'ordinateur n'a plus de RAM disponible (erreur OutOfMemory). En Zig, vous ne pouvez pas ignorer une erreur. Le mot-clé try signifie : "Tente d'allouer. Si ça réussit, donne-moi la mémoire. Si ça échoue, arrête immédiatement la fonction actuelle et renvoie l'erreur au niveau supérieur.
+
+```zig
+const slice = try allocator.alloc(i32, 10);
+// Planifie le nettoyage automatique dès que l'on sort de la fonction actuelle
+defer allocator.free(slice); 
+```
+
+**allocator.alloc(T, count)** : Pour un tableau dynamique (plusieurs éléments). Retourne une tranche []T.
+
+**allocator.create(T)** : Pour un élément unique (ex: instancier une seule structure). Retourne un pointeur *T. Sa libération associée se fait avec allocator.destroy(ptr)
+
+```zig
+const std = @import("std");
+
+pub fn main(init: std.process.Init) !void {
+    // Zig 0.16 injecte automatiquement l'allocateur optimal 
+    // (avec détection de fuite en mode Debug)
+    const allocator = init.gpa;
+
+    const taille: usize = 5;
+
+    // Allocation dynamique de 5 entiers
+    const nombres = try allocator.alloc(i32, taille);
+    defer allocator.free(nombres); // Sécurité anti-fuite mémoire
+
+    // Remplissage de notre slice
+    for (nombres, 0..) |*num, i| {
+        num.* = @intCast(i * 10); // 0, 10, 20, 30, 40
+    }
+
+    std.debug.print("Troisième élément : {}\n", .{nombres[2]});
+}
+
+```
